@@ -1,14 +1,17 @@
 /*
  * Consequence.js
  * 
- * Consequence is a Javascript library for side-effect programming. That is, setting states 
- * that, when satisfied at any time, result in the executing of the specified instructions.
+ * Consequence is a Javascript library for reactive programming:
+ * http://en.wikipedia.org/wiki/Reactive_programming
+ * 
+ * That is, once can set state that, when satisfied at any time, results in the 
+ * execution of bound imperative functions.
  * 
  * In the traditional imperitive model, it is the responsibility of the programmer to
  * write constructs that regularly check whether state has been satisfied in order
- * to execute subsequent instructions. In the side-effect programming model, a binding
- * is made between the state which must be satisfied at some point in the future, and
- * the code which handles the affirmative and negative results of that state.
+ * to execute subsequent instructions. In the Consequence.js reactive programming 
+ * model, a binding is made between the state which must be satisfied at some point 
+ * in the future, and the code which handles the affirmative and negative results of that state.
  * 
  * Consequence.js provides a method chain language for creating state clauses which are
  * bound to function handlers. The function handlers, by default, only fire when the state
