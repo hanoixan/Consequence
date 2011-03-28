@@ -1,5 +1,5 @@
 /*
- * Consequence.js
+ * Consequence.js version 0.1.0 (alpha)
  * 
  * Consequence is a Javascript library for side-effect programming. That is, setting states 
  * that, when satisfied at any time, result in the executing of the specified instructions.
