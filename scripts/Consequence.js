@@ -403,7 +403,7 @@
 
         get: function Cq_get() {
             var self = this;
-            return new CqOp(function(){ return self._wasGet; }, [self]);
+            return new CqExplicitOp(function(){ return self._wasGet; }, [self]);
         },      
         
         changed: function Cq_changed() {
