@@ -17,7 +17,7 @@ $(document).ready(function() {
         testA.v = true;
         testB.v = true;
         
-        testBinding.free();
+        testBinding.unbind();
         
         testA.v = false;
         testA.v = true;
@@ -37,7 +37,7 @@ $(document).ready(function() {
             testA.v = i;
         }
         
-        testBinding.free();
+        testBinding.unbind();
 
         return testOut == 10;
     }
@@ -72,7 +72,7 @@ $(document).ready(function() {
         testC.v = false;
         var test3 = (testTrueOut === 1) && (testFalseOut === 1);
 
-        testBinding.free();
+        testBinding.unbind();
 
         return test1 && test2 && test3;
     }
@@ -121,10 +121,10 @@ $(document).ready(function() {
         var test4 = (testTrueOut === 1) && (testFalseOut === 1) && 
           (testSetOut == 3) && (testGetOut == 1) && (testChangedOut == 2);
 
-        testTrueBinding.free();
-        testSetBinding.free();
-        testGetBinding.free();
-        testChangedBinding.free();
+        testTrueBinding.unbind();
+        testSetBinding.unbind();
+        testGetBinding.unbind();
+        testChangedBinding.unbind();
 
         return test1 && test2 && test3 && test4;
     }
@@ -140,7 +140,7 @@ $(document).ready(function() {
         });
         testA.v = 0;
         var test1 = testEqualOut == 1;       
-        testEqualBinding.free();
+        testEqualBinding.unbind();
 
         testA.v = 0;
         testB.v = 1;
@@ -152,7 +152,7 @@ $(document).ready(function() {
         });
         testA.v = 0;
         var test2 = testLtOut == 1;     
-        testLtBinding.free();
+        testLtBinding.unbind();
         
         return test1 && test2;
     }
