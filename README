@@ -1,59 +1,8 @@
 /*
- * Consequence.js version 0.1.0 (alpha)
+ * Consequence.js v0.1.1
  * 
- * Consequence is a Javascript library for side-effect programming. That is, setting states 
- * that, when satisfied at any time, result in the executing of the specified instructions.
- * 
- * In the traditional imperitive model, it is the responsibility of the programmer to
- * write constructs that regularly check whether state has been satisfied in order
- * to execute subsequent instructions. In the side-effect programming model, a binding
- * is made between the state which must be satisfied at some point in the future, and
- * the code which handles the affirmative and negative results of that state.
- * 
- * Consequence.js provides a method chain language for creating state clauses which are
- * bound to function handlers. The function handlers, by default, only fire when the state
- * clause's final result changes. This can be overridden with explicit methods set(), get(),
- * and change(). These cause the handlers to fire every time based on a Cq object's .v
- * member being written to, read from, and changed, respectively.
- *
- * E.g.,
- * 
- *   // Set variables
- *   var a = new Cq(0);
- *   var b = new Cq("apple");
- * 
- *   // Define binding
- *   var binding = a.eq(1).and(b.eq("apple")).bind( function() {
- *     // state satisfied, do something. This is the affirmative handler, which is required.
- *     window.alert("State satisfied!");
- *   }, function() {
- *     // state not satisfied, do nothing. This is the negative handler, which is optional.
- *   });
- *
- *   // Satisfy the state, causing the window the pop up.
- *   a.v = 1;
- * 
- *   // Cleanup
- *   binding.free();
- * 
- * The state clause's operators can also handle arbitrary numbers of operators.
- * 
- *   var binding = a.and(b).and(c).and(d).bind( function(){ ... } );
- * 
- * Of course, the following is more concise:
- * 
- *   var binding = a.and(b,c,d).bind( function(){ ... } );
- * 
- * Consequence.js attempts to be efficient about checking this state by only evaluating 
- * when a dependency Cq variable has been modified, and using short circuit logic when
- * possible.
- * 
- * This library can be used when a programmer would rather say "whenever some complex 
- * state set X happens, do Y, and let me not worry about when", instead of 
- * "whenever I can, check whether some complex state set X is happening and do Y".
- * Example domains where this could be useful are games state, UI, and event systems.
- * 
- * * * *
+ * * * * * *
+ * LICENSE
  * 
  * The MIT License
  * 
@@ -77,4 +26,145 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  * 
+ * * * * * *
+ * OVERVIEW
+ * 
+ * Consequence.js is a Javascript library for reactive programming:
+ * http://en.wikipedia.org/wiki/Reactive_programming
+ * 
+ * With Consequence.js, one can set a state clause that, when satisfied at any 
+ * time, results in the execution of bound imperative handlers, for either the 
+ * positive (true) case, or the negative (false) case.
+ * 
+ * This library can be used when a programmer would rather say "whenever some 
+ * complex state set X happens, do Y, and let me not worry about when", instead
+ * of "whenever I can, check whether some complex state set X is happening and 
+ * do Y". Example domains where this could be useful are games, user
+ * interfaces, and, to give an example where this exists presently, in 
+ * spreadsheets.
+ * 
+ * * * * * *
+ * IN DETAIL
+ * 
+ * In the traditional imperitive model, it is the responsibility of the 
+ * programmer to write constructs that regularly check whether state has been 
+ * satisfied in order to execute subsequent instructions. In the Consequence.js 
+ * reactive programming model, a binding is made between the state clause which 
+ * must be satisfied at some point in the future, and the code which handles 
+ * the positive and negative results of that state.
+ * 
+ * Consequence.js provides a method chain language for creating state clauses 
+ * which are bound to handler functions. In addition to logic, comparison, and
+ * arithmetic operators, there exist three special operators for detecting 
+ * read, write, and modify operations only on Cq objects themselves: set(), 
+ * get(), and changed().
+ *
+ * E.g.,
+ * 
+ *   // Set variables
+ *   var a = new Cq(0);
+ *   var b = new Cq("apple");
+ * 
+ *   // Define binding
+ *   var binding = a.eq(1).and(b.eq("apple")).bind(false, function() {
+ *     // state satisfied, do something. This is the affirmative handler, 
+ *     // which is required.
+ *     window.alert("State satisfied!");
+ *   }, function() {
+ *     // state not satisfied, do nothing. This is the negative handler, 
+ *     // which is optional.
+ *   });
+ *
+ *   // Satisfy the state, causing the window the pop up.
+ *   a.v = 1;
+ * 
+ *   // Cleanup
+ *   binding.unbind();
+ * 
+ * The state clause's operators can also handle arbitrary numbers of operators.
+ * Whereas the following will run the positive handler if all Cq objects are
+ * true:
+ * 
+ *   var binding = a.and(b).and(c).and(d).bind(false, function(){ ... } );
+ * 
+ * the following is more concise:
+ * 
+ *   var binding = a.and(b,c,d).bind(false, function(){ ... } );
+ * 
+ * You can also apply your operator list as an array. The following will 
+ * activate when a,b,c,d are all true.
+ * 
+ *   var ops = [a,b,c,d];
+ *   var binding = Cq(true).and(ops).bind(false, function(){ ... } );
+ * 
+ * You can also pass a function as an operator. Whenever a test is run on the
+ * state clause, this function will be evaluated. Note that the state clause 
+ * will not be triggered if the result of the function changes, only if an 
+ * actual Cq object has changed first. In the following example, if 'a' is
+ * true, the function will not be queried because of short-circuit logic.
+ * 
+ *   var func = function(){ return moonInPhase; };
+ *   var binding = a.or(func).bind(false, function(){ ... } );
+ * 
+ * The first argument to bind() specifies whether execution is forced or not. 
+ * Setting it to false specifies that the affirmative and negative functions 
+ * will only execute when the result of the state clause has changed. Set to 
+ * true, the affirmative and negative functions will always run. Remember 
+ * this when using a set() or get() operator, as writing (set) or reading (get) 
+ * the target Cq object will only fire its handlers when the state clause 
+ * changes if force is set to false.
+ * 
+ * * * * * *
+ * PERFORMANCE
+ * 
+ * Consequence.js attempts to be efficient about checking this state by only evaluating 
+ * when a dependency Cq variable has been modified, and using short circuit logic when
+ * possible.
+ * 
+ * * * *
+ * API
+ * 
+ * OBJECTS
+ * 
+ * Cq
+ * Constructor
+ *      Cq(value, min=undefined, max=undefined)
+ *          To create a variable that can be used in a state clause, create a Cq 
+ *          object using new.     
+ *          value: initial value of object
+ *          min: optional minimum value object can be set to
+ *          max: optional maximum value object can be set to 
+ * Members
+ *      v: use to set/get value of Cq object
+ * Methods
+ *      bind(force, positive, negative)
+ *          Bind a state clause to handlers
+ *          force: call positive/negative handlers even if result from state clause
+ *              query does not change.
+ *          positive: function to execute when state clause evaluates to true 
+ *          negative: function to execute when state clause evaluates to false 
+ *      LOGIC OPERATORS
+ *      and: &&
+ *      or:  ||
+ *      not: ! (unary)
+ *      COMPARISON OPERATORS
+ *      eq:  ==
+ *      neq: !=
+ *      eq_: ===
+ *      neq_:!==
+ *      gt:  >
+ *      gte: >=
+ *      lt:  <
+ *      lte: <=
+ *      ARITHMETIC OPERATORS
+ *      add: +
+ *      sub: -
+ *      mul: *
+ *      div: /
+ *      mod: %
+ *      neg: - (unary)
+ *      VALUE OPERATORS
+ *      get: the value has been read from
+ *      set: the value has been written to
+ *      changed: the value has modified
  */

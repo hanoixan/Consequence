@@ -1,5 +1,5 @@
 /*
- * Consequence.js
+ * Consequence.js v 0.1.1
  * 
  * * * * * *
  * LICENSE
@@ -129,11 +129,11 @@
  * Cq
  * Constructor
  *      Cq(value, min=undefined, max=undefined)
-            To create a variable that can be used in a state clause, create a Cq 
-            object using new.     
-            value: initial value of object
-            min: optional minimum value object can be set to
-            max: optional maximum value object can be set to 
+ *          To create a variable that can be used in a state clause, create a Cq 
+ *          object using new.     
+ *          value: initial value of object
+ *          min: optional minimum value object can be set to
+ *          max: optional maximum value object can be set to 
  * Members
  *      v: use to set/get value of Cq object
  * Methods
