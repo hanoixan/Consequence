@@ -221,20 +221,20 @@ $(document).ready(function() {
     // Have window hold onto these so they don't get GCd
     window.bindings = bindings;
     // Change direction when we hit the sides
-    bindings.push(posX.lt(minXBoundary).bind(false, function() {
-        vecX *= -1;
+    bindings.push(posX.lt(minXBoundary).bind(true, function() {
+        vecX = Math.abs(vecX);
         posX.v = 0;
     }));
-    bindings.push(posY.lt(minYBoundary).bind(false, function() {
-        vecY *= -1;
+    bindings.push(posY.lt(minYBoundary).bind(true, function() {
+        vecY = Math.abs(vecY);
         posY.v = 0;
     }));
-    bindings.push(posX.gt(maxXBoundary).bind(false, function() {
-        vecX *= -1;
+    bindings.push(posX.gt(maxXBoundary).bind(true, function() {
+        vecX = -Math.abs(vecX);
         posX.v = maxXBoundary();
     }));
-    bindings.push(posY.gt(maxYBoundary).bind(false, function() {
-        vecY *= -1;
+    bindings.push(posY.gt(maxYBoundary).bind(true, function() {
+        vecY = -Math.abs(vecY);
         posY.v = maxYBoundary();
     }));
     // Deflect off mouse
@@ -274,7 +274,7 @@ $(document).ready(function() {
         setTimeout(updateFunc, frameDelta);
     };   
     setTimeout(updateFunc, 1000/30);       
-    
+
     // Handle mouse updates
     document.onmousemove = function(event) {
         var now = new Date().getTime();

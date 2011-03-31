@@ -192,7 +192,7 @@
     // _Set
 
     function _Set() {
-        this._array = new Array();
+        this._object = {};
     }
 
     _Set.prototype = {
@@ -202,26 +202,26 @@
             else
                 // Strings that are pure integers get interpreted as integers, so
                 // force it to be a string.
-                return "k" + item.uniqueId().toString(16);
+                return item.uniqueId();
         },
         
         // Convert uniqueId to base-16 string, since that should be the fastest conversion
         // to a hashable string.
         find: function _Set_find(item) {
-            return this._array[this._mapKey(item)];
+            return this._object[this._mapKey(item)];
         },
 
         insert: function _Set_insert(item) {
-            this._array[this._mapKey(item)] = item;
+            this._object[this._mapKey(item)] = item;
         },
 
         remove: function _Set_remove(item) {
-            delete this._array[this._mapKey(item)];
+            delete this._object[this._mapKey(item)];
         },
         
         map: function _Set_map(func) {
-            for(var item in this._array) {
-                func(this._array[item]);
+            for(var item in this._object) {
+                func(this._object[item]);
             }
         }
     };
@@ -238,10 +238,11 @@
     
     function _CqObject() {
     }
-    
+
+    // Use strings as unique id's for convenient mapping in Set's
     _CqObject.prototype = {
         uniqueId: function() {
-          var newId = _TheCqObjectId++;
+          var newId = (++_TheCqObjectId).toString(16);
           this.uniqueId = function(){ return newId; }
           return newId;
         }
@@ -253,7 +254,6 @@
     // _CqBinding
 
     function _CqBinding(op, alwaysTest, trueFunc, falseFunc) {
-        var self = this;
         this._op = op;
         this._alwaysTest = alwaysTest;
         this._trueFunc = trueFunc;
@@ -312,10 +312,9 @@
             if (this.isCqOp(op))
                 allOps.push(op);
             else if (isArray(op)) {
-                var self = this;
-                op.forEach( function(itemOp) {
-                    allOps = self._buildOps(allOps, itemOp);
-                });  
+                for (var i=0; i<op.length; i++) {
+                    allOps = this._buildOps(allOps, op[i]);
+                }
             } else if (typeof(op) == "function")
                 allOps.push(new _CqOp(op, []));
             else
