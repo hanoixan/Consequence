@@ -1,5 +1,5 @@
 /*
- * Consequence.js v 0.1.1
+ * Consequence.js v 0.2.0
  * 
  * * * * * *
  * LICENSE
