@@ -260,19 +260,31 @@ $(document).ready(function() {
     };   
     setTimeout(updateFunc, 1000/30);       
 
-    // Handle mouse updates
-    document.onmousemove = function(event) {
+    function handleMove(x,y) {
         var now = new Date().getTime();
         var delta = now - lastMouseTime;
         lastMouseTime = now;
  
         // Vec distance/s       
-        mouseVecX = 1000 * (event.clientX - mouseX.v) / delta;
-        mouseVecY = 1000 * (event.clientY - mouseY.v) / delta;
-        mouseX.v = event.clientX;
-        mouseY.v = event.clientY;
+        mouseVecX = 1000 * (x - mouseX.v) / delta;
+        mouseVecY = 1000 * (y - mouseY.v) / delta;
+        mouseX.v = x;
+        mouseY.v = y;
+    }
+    
+    // Handle mouse updates
+    document.onmousemove = function(event) {
+        handleMove(event.clientX, event.clientY);
     };     
-    document.ontouchmove document.onmousemove;
+
+    // iphone, if supported
+    document.ontouchmove = function(event){
+        if(event.touches.length == 1) { 
+            var touch = event.touches[0]; 
+            var node = touch.target;
+            handleMove(touch.pageX, touch.pageY);
+        }
+    }
     
     document.onmousedown = function(event) {
         bindings.forEach( function(item) {
