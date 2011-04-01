@@ -272,6 +272,7 @@ $(document).ready(function() {
         mouseX.v = event.clientX;
         mouseY.v = event.clientY;
     };     
+    document.ontouchmove document.onmousemove;
     
     document.onmousedown = function(event) {
         bindings.forEach( function(item) {
