@@ -4,12 +4,10 @@ $(document).ready(function() {
         var testA = new Cq(false);
         var testB = new Cq(false);
         var testOut = 0;
-    
-        var testOp = testA.and(testB);
-        
-        var testBinding = testOp.bind(false, function() {
-            testOut++;
-        });
+
+        var testBinding = CqBind([testA, testB],
+            function () { return testA.v && testB.v; },
+            function () { testOut ++; });
         
         testA.v = true;
         testB.v = true;
@@ -25,11 +23,11 @@ $(document).ready(function() {
     function testMod() {
         var testA = new Cq(0);
         var testOut = 0;
-        
-        var testBinding = testA.mod(100).eq(0).bind(false, function() {
-            testOut++;
-        });
 
+        var testBinding = CqBind([testA],
+            function () { return testA.v % 100 == 0; },
+            function () { testOut ++; });
+        
         for(var i=1; i<=1000; i++) {
             testA.v = i;
         }
@@ -47,31 +45,30 @@ $(document).ready(function() {
 
         var testTrueOut = 0;        
         var testFalseOut = 0;        
-        var testBinding = (testA.and(testB)).or(testC.and(testD)).bind(false, function() {
-            testTrueOut++;
-        }, function() {
-            testFalseOut++;
-        });
+        var testBinding = CqBind([testA, testB, testC, testD],
+            function () { return (testA.v && testB.v) || (testC.v && testD.v); },
+            function () { testTrueOut ++; },
+            function () { testFalseOut ++; });
 
         testA.v = true;
         testB.v = false;
         testC.v = true;
         testD.v = false;
-        var test1 = (testTrueOut === 0) && (testFalseOut === 0);
+        var test1 = (testTrueOut === 0) && (testFalseOut === 4);
 
         testB.v = true;        
-        var test2 = (testTrueOut === 1) && (testFalseOut === 0);
+        var test2 = (testTrueOut === 1) && (testFalseOut === 4);
 
         testD.v = true;
-        var test3 = (testTrueOut === 1) && (testFalseOut === 0);
+        var test3 = (testTrueOut === 2) && (testFalseOut === 4);
 
         testA.v = false;
         testC.v = false;
-        var test3 = (testTrueOut === 1) && (testFalseOut === 1);
+        var test4 = (testTrueOut === 3) && (testFalseOut === 5);
 
         testBinding.unbind();
 
-        return test1 && test2 && test3;
+        return test1 && test2 && test3 && test4;
     }
 
     function testSetGetChanged() {
@@ -84,76 +81,38 @@ $(document).ready(function() {
         var testGetOut = 0;
         var testChangedOut = 0;
 
-        var testTrueBinding = testA.and(testB).bind(false, function() {
-            testTrueOut++;
-        }, function() {
-            testFalseOut++;
-        });
+        var testTrueBinding = CqBind([testA, testB],
+            function () { return testA.v && testB.v; },
+            function () { testTrueOut ++; },
+            function () { testFalseOut ++; });
 
-        var testSetBinding = testA.and(testB.set()).bind(true, function() {
-            testSetOut++;
-        });
+        var testSetBinding = CqBind([testA, testB],
+            function () { return testA.v && testB.set(); },
+            function () { testSetOut ++; });
 
-        var testGetBinding = testA.and(testB.get()).bind(true, function() {
-            testGetOut++;
-        });
-
-        var testChangedBinding = testA.and(testB.changed()).bind(true, function() {
-            testChangedOut++;
-        });
-
-        var dummy = testB.v;
-        var test1 = (testTrueOut === 0) && (testFalseOut === 0) && 
-          (testSetOut == 0) && (testGetOut == 1) && (testChangedOut == 0);
+        var testChangedBinding = CqBind([testA, testB],
+            function () { return testA.v && testB.changed(); },
+            function () { testChangedOut ++; });
 
         testB.v = false;
-        var test2 = (testTrueOut === 0) && (testFalseOut === 0) && 
-          (testSetOut == 1) && (testGetOut == 1) && (testChangedOut == 0);
+        var test2 = (testTrueOut === 0) && (testFalseOut === 1) && 
+          (testSetOut == 1) && (testChangedOut == 0);
 
         testB.v = true;
-        var test3 = (testTrueOut === 1) && (testFalseOut === 0) && 
-          (testSetOut == 2) && (testGetOut == 1) && (testChangedOut == 1);
+        var test3 = (testTrueOut === 1) && (testFalseOut === 1) && 
+          (testSetOut == 2) && (testChangedOut == 1);
 
         testB.v = false;
-        var test4 = (testTrueOut === 1) && (testFalseOut === 1) && 
-          (testSetOut == 3) && (testGetOut == 1) && (testChangedOut == 2);
+        var test4 = (testTrueOut === 1) && (testFalseOut === 2) && 
+          (testSetOut == 3) && (testChangedOut == 2);
 
         testTrueBinding.unbind();
         testSetBinding.unbind();
-        testGetBinding.unbind();
         testChangedBinding.unbind();
 
-        return test1 && test2 && test3 && test4;
+        return test2 && test3 && test4;
     }
-    
-    function testArgLists() {
-        var testA = new Cq(0);
-        var testB = new Cq(0);
-        var testC = new Cq(0);
-        var testD = new Cq(0);
-        var testEqualOut = 0;
-        var testEqualBinding = testA.eq(testB, testC, testD).and(testA.set()).bind(true, function() {
-            testEqualOut++;
-        });
-        testA.v = 0;
-        var test1 = testEqualOut == 1;       
-        testEqualBinding.unbind();
 
-        testA.v = 0;
-        testB.v = 1;
-        testC.v = 2;
-        testD.v = 3;
-        var testLtOut = 0;
-        var testLtBinding = testA.lt(testB, testC, testD).and(testA.set()).bind(true, function() {
-            testLtOut++;
-        });
-        testA.v = 0;
-        var test2 = testLtOut == 1;     
-        testLtBinding.unbind();
-        
-        return test1 && test2;
-    }
-    
     var $box = $("#box");
     $box.css({ "position": "absolute", "border-style": "dotted", 
     "border-width": "2px", "background-color": "#AAFFFF",
@@ -165,8 +124,7 @@ $(document).ready(function() {
         "testAnd:" + testAnd() + "<br/>" + 
         "testMod:" + testMod() + "<br/>" +
         "testLogic:" + testLogic() + "<br/>" +
-        "testGSC:" + testSetGetChanged() +"<br/>" +
-        "testArgLists:" + testArgLists() + "<br/>");
+        "testGSC:" + testSetGetChanged() +"<br/>");
     $boxPos.html("0,0");
     
     // Bounce test results around
@@ -217,46 +175,65 @@ $(document).ready(function() {
     // Have window hold onto these so they don't get GCd
     window.bindings = bindings;
     // Change direction when we hit the sides
-    bindings.push(posX.lt(minXBoundary).bind(false, function() {
-        vecX = Math.abs(vecX);
-        posX.v = 0;
-        _CqDebugLog("minX: posX=0");
-    })._setLabel("minX"));
-    bindings.push(posY.lt(minYBoundary).bind(false, function() {
-        vecY = Math.abs(vecY);
-        posY.v = 0;
-        _CqDebugLog("minY: posY=0");
-    })._setLabel("minY"));
-    bindings.push(posX.gt(maxXBoundary).bind(false, function() {
-        vecX = -Math.abs(vecX);
-        posX.v = maxXBoundary();
-        _CqDebugLog("maxX: posX=MAX");
-    })._setLabel("maxX"));
-    bindings.push(posY.gt(maxYBoundary).bind(false, function() {
-        vecY = -Math.abs(vecY);
-        posY.v = maxYBoundary();
-        _CqDebugLog("maxY: posY=MAX");
-    })._setLabel("maxY"));
+    bindings.push(CqBind([posX], function() { return posX.v < 0; },
+        function() {
+            vecX = Math.abs(vecX);
+            posX.v = 0;
+            _CqDebugLog("minX: posX=0");
+        })._setLabel("minX"));
+    bindings.push(CqBind([posY], function() { return posY.v < 0; },
+        function() {
+            vecY = Math.abs(vecY);
+            posY.v = 0;
+            _CqDebugLog("minY: posY=0");
+        })._setLabel("minY"));
+    bindings.push(CqBind([posX], function() { return posX.v > maxXBoundary(); },
+        function() {
+            vecX = -Math.abs(vecX);
+            posX.v = maxXBoundary();
+            _CqDebugLog("maxX: posX=max");
+        })._setLabel("maxX"));
+    bindings.push(CqBind([posY], function() { return posY.v > maxYBoundary(); },
+        function() {
+            vecY = -Math.abs(vecY);
+            posY.v = maxYBoundary();
+            _CqDebugLog("maxY: posY=max");
+        })._setLabel("maxY"));
+
     // Deflect off mouse
-    var deflectBinding = ((mouseX.gt(posX)).and(mouseX.lt(boxRight))).and(
-            (mouseY.gt(posY)).and(mouseY.lt(boxBottom))).bind(false, function() {
-        // Mouse is in box - deflect!
-        vecX = -vecX + mouseVecX;
-        vecY = -vecY + mouseVecY;
-        _CqDebugLog("deflect: deflected");
-    });
+    var deflectToggle = false;
+    var deflectBinding = CqBind([mouseX, mouseY, posX, posY],
+        function(){ 
+            // Don't deflect if we've just deflected.
+            return mouseX.v > posX.v && mouseX.v < boxRight() &&
+                mouseY.v > posY.v && mouseY.v < boxBottom(); 
+        },
+        function() {
+            if (deflectToggle) {
+                deflectToggle = false;
+                // Mouse is in box - deflect!
+                vecX = -vecX + mouseVecX;
+                vecY = -vecY + mouseVecY;
+                
+                _CqDebugLog("deflect: deflected");
+            }
+        },
+        function() {
+            deflectToggle = true;    
+        });
     bindings.push(deflectBinding._setLabel("deflect"));
     
     // Update position
-    bindings.push(posX.changed().or(posY.changed()).bind(false, function() {
-        //$box.offset({left: posX.v, top: posY.v});
-        var x = Math.floor(clamp(minXBoundary(), maxXBoundary(), posX.v));
-        var y = Math.floor(clamp(minYBoundary(), maxYBoundary(), posY.v));
-        $box.css({left: x, top: y});
-        $boxPos.html("x:"+x+",y:"+y+",w:"+$box.width()+",h:"+$box.height()+" : "+mouseX.v+","+mouseY.v);
-
-        _CqDebugLog("pos changed css: pos = " + x + "," + y);
-    })._setLabel("posXOrPosYChanged"));
+    bindings.push(CqBind([posX, posY],
+        function(){ return posX.changed() || posY.changed(); },
+        function() {
+            //$box.offset({left: posX.v, top: posY.v});
+            var x = Math.floor(posX.v);
+            var y = Math.floor(posY.v);
+            $box.css({left: clamp(minXBoundary(), maxXBoundary(), x), top: clamp(minYBoundary(), maxYBoundary(), y)});
+            $boxPos.html("x:"+x+",y:"+y+",w:"+$box.width()+",h:"+$box.height()+" : "+mouseX.v+","+mouseY.v);    
+            //_CqDebugLog("pos changed css: pos = " + x + "," + y);
+        })._setLabel("posXOrPosYChanged"));
 
     // Create a nudge loop
     var frameDelta = 1000/30;
@@ -274,6 +251,11 @@ $(document).ready(function() {
         posY.v = posY.v + vecY * msDelta;
         vecX *= damp;
         vecY *= damp;
+
+        if (posY.v < -10) {
+            _CqDebugLog("less than -10");
+        }
+
         setTimeout(updateFunc, frameDelta);
     };   
     setTimeout(updateFunc, 1000/30);       
@@ -301,6 +283,8 @@ $(document).ready(function() {
         bindings.forEach( function(item) {
             item._debug = false;
         });
+        posX.v = 10;
+        posY.v = 10;
     };
    
 });

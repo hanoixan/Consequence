@@ -53,73 +53,60 @@
  * must be satisfied at some point in the future, and the code which handles 
  * the positive and negative results of that state.
  * 
- * Consequence.js provides a method chain language for creating state clauses 
- * which are bound to handler functions. In addition to logic, comparison, and
- * arithmetic operators, there exist three special operators for detecting 
- * read, write, and modify operations only on Cq objects themselves: set(), 
- * get(), and changed().
+ * Consequence.js provides a simple binding for describing what variables are
+ * being watched, what test determines the trigger condition, and what to
+ * execute if the test is true or false.
  *
  * E.g.,
  * 
  *   // Set variables
- *   var a = new Cq(0);
+ *   var a = new Cq(0, 0, 1);
  *   var b = new Cq("apple");
  * 
  *   // Define binding
- *   var binding = a.eq(1).and(b.eq("apple")).bind(false, function() {
- *     // state satisfied, do something. This is the affirmative handler, 
- *     // which is required.
- *     window.alert("State satisfied!");
- *   }, function() {
- *     // state not satisfied, do nothing. This is the negative handler, 
- *     // which is optional.
- *   });
+ *   var binding = CqBind([a,b], function(){ return a.v==1 && b.v=="apple"; },
+ *      function() {
+ *          // state satisfied, do something. This is the affirmative handler, 
+ *          // which is required.
+ *          window.alert("State satisfied!");
+ *      }, function() {
+ *          // state not satisfied, do nothing. This is the negative handler, 
+ *          // which is optional.
+ *      });
  *
  *   // Satisfy the state, causing the window the pop up.
  *   a.v = 1;
  * 
  *   // Cleanup
  *   binding.unbind();
+ *  
+ *   ////////////////
+ *   
+ * Variables are created by newing a Cq object set to a value. The value may 
+ * be of any type. The Cq constructor takes two optional arguments; a min 
+ * value, and a max value. If set, all values outside this inclusive range are 
+ * ignored, and will not trigger handlers. To use them, the value must support 
+ * > and < operations.
  * 
- * The state clause's operators can also handle arbitrary numbers of operators.
- * Whereas the following will run the positive handler if all Cq objects are
- * true:
+ * The internal connection of the Cq object to the handlers happens via CqBind.
+ * CqBind takes two mandatory arguments and two arguments that may be undefined.
+ * It returns a binding which may be destroyed by calling unbind() on it.
  * 
- *   var binding = a.and(b).and(c).and(d).bind(false, function(){ ... } );
+ *   CqBind(varList, testFunc, trueFunc, falseFunc)
  * 
- * the following is more concise:
+ * varList is an array of operators for which the binding should watch for 
+ * changes within. If something interesting happens to these variables,
+ * testFunc is called. If it returns true, then trueFunc is called. If it 
+ * returns false, the falseFunc is called. To call neither, return undefined.
  * 
- *   var binding = a.and(b,c,d).bind(false, function(){ ... } );
- * 
- * You can also apply your operator list as an array. The following will 
- * activate when a,b,c,d are all true.
- * 
- *   var ops = [a,b,c,d];
- *   var binding = Cq(true).and(ops).bind(false, function(){ ... } );
- * 
- * You can also pass a function as an operator. Whenever a test is run on the
- * state clause, this function will be evaluated. Note that the state clause 
- * will not be triggered if the result of the function changes, only if an 
- * actual Cq object has changed first. In the following example, if 'a' is
- * true, the function will not be queried because of short-circuit logic.
- * 
- *   var func = function(){ return moonInPhase; };
- *   var binding = a.or(func).bind(false, function(){ ... } );
- * 
- * The first argument to bind() specifies whether execution is forced or not. 
- * Setting it to false specifies that the affirmative and negative functions 
- * will only execute when the result of the state clause has changed. Set to 
- * true, the affirmative and negative functions will always run. Remember 
- * this when using a set() or get() operator, as writing (set) or reading (get) 
- * the target Cq object will only fire its handlers when the state clause 
- * changes if force is set to false.
- * 
- * * * * * *
- * PERFORMANCE
- * 
- * Consequence.js attempts to be efficient about checking this state by only evaluating 
- * when a dependency Cq variable has been modified, and using short circuit logic when
- * possible.
+ * Within the testFunc, there are four special methods which tell you more
+ * about the context of your test. <var>.set() tells you if this test is
+ * being called because <var> was set. <var>.changed() works the same way,
+ * but is true if the variable was modified. <var>.last() tells you what
+ * the last value was. The fourth is this.last(), which tells you what this
+ * test function returned the last time it was called. This is useful for
+ * instances where you'd like to make sure trueFunc/falseFunc are only called
+ * when the test value changes, for example.
  * 
  * * * *
  * API
@@ -128,7 +115,7 @@
  * 
  * Cq
  * Constructor
- *      Cq(value, min=undefined, max=undefined)
+ *      Cq(value, min=undefined, max=undefined):
  *          To create a variable that can be used in a state clause, create a Cq 
  *          object using new.     
  *          value: initial value of object
@@ -137,36 +124,38 @@
  * Members
  *      v: use to set/get value of Cq object
  * Methods
- *      bind(force, positive, negative)
- *          Bind a state clause to handlers
- *          force: call positive/negative handlers even if result from state clause
- *              query does not change.
- *          positive: function to execute when state clause evaluates to true 
- *          negative: function to execute when state clause evaluates to false 
- *      LOGIC OPERATORS
- *      and: &&
- *      or:  ||
- *      not: ! (unary)
- *      COMPARISON OPERATORS
- *      eq:  ==
- *      neq: !=
- *      eq_: ===
- *      neq_:!==
- *      gt:  >
- *      gte: >=
- *      lt:  <
- *      lte: <=
- *      ARITHMETIC OPERATORS
- *      add: +
- *      sub: -
- *      mul: *
- *      div: /
- *      mod: %
- *      neg: - (unary)
- *      VALUE OPERATORS
- *      get: the value has been read from
- *      set: the value has been written to
- *      changed: the value has modified
+ *      set90: For use in the test function. Returns true if the test function
+ *          was called because this variable was set.
+ *      changed(): For use in the test function. Returns true if the test function
+ *          was called because this variable was modified.
+ *      last(): For use in the test function. Returns the last value of this 
+ *          variable before the current value.
+ * 
+ * CqBinding
+ * Methods
+ *      last(): For use in the test function, accessed by calling this.last(). 
+ *          Returns the value last returned by this function.
+ *      unbind(): Destroy this binding.
+ *      
+ * CqSet
+ * Constructor
+ *      CqSet():
+ *          Default empty CqSet. A CqSet is a convenience object for organizing
+ *          bindings and cleaning them up quickly.
+ * Members
+ *      insert(binding): Insert a binding.
+ *      remove(binding): Remove a binding.
+ *      unbind(): Unbind all bindings contained within this CqSet.
+ *
+ * FUNCTIONS
+ * 
+ * CqBind(varList, testFunc, trueFunc, falseFunc): Return a new CqBinding.
+ *     varList: Array of Cq variable objects.
+ *     testFunc: Test that involves the varList variables. Return true to run
+ *         the trueFunc, false for the falseFunc, and undefined for neither.
+ *     trueFunc: If testFunc returns true, this is run.
+ *     falseFunc: If testFunc returns false, this is run.
+ * 
  */
 
 (function() {
@@ -174,7 +163,7 @@
     // Setup
     //
     
-    var _debug = true; // Uncomment for debug functionality
+    var _debug = false; // Uncomment for debug functionality
     var _debugLog = function(){};
     var _debugIndent = 0;
     if (_debug)
@@ -254,10 +243,21 @@
 
     // Use strings as unique id's for convenient mapping in Set's
     _CqObject.prototype = {
-        uniqueId: function() {
-          var newId = (++_TheCqObjectId).toString(16);
-          this.uniqueId = function(){ return newId; }
-          return newId;
+        // Create a unique id for this object if queried
+        uniqueId: function _CqObject_uniqueId() {
+            var newId = (++_TheCqObjectId).toString(16);
+            this.uniqueId = function(){ return newId; }
+            return newId;
+        },
+
+        // Perform a shallow clone of this object (child Object's will be common) and return it
+        clone: function _CqObject_clone() {
+            var newObj = {};
+            for (i in this) {
+                if (i == 'clone') continue;
+                newObj[i] = this[i]
+            }
+            return newObj;
         }
     };
 
@@ -266,20 +266,29 @@
 
     // _CqBinding
 
-    function _CqBinding(op, alwaysTest, trueFunc, falseFunc) {
-        this._op = op;
-        this._alwaysTest = alwaysTest;
+    function _CqBinding(opList, bindingTest, trueFunc, falseFunc) {
+        this._opList = opList;
+        
+        this._bindingTest = bindingTest;
         this._trueFunc = trueFunc;
         this._falseFunc = falseFunc;
-        this._opLastResult = false;
+
+        this._lastTest = undefined;
         this._testing = false;
+
         this._debug = false;
         this._label = null;
+        
+        for(var i=0; i < opList.length; ++i) {
+            opList[i]._bind(this);
+        }
     }
 
     _CqBinding.prototype = _Extend(_CqObject.prototype, {
         unbind: function _CqBinding_unbind() {
-            this._op._unbindChildren(this);
+            for(var i=0; i<this._opList.length; ++i) {
+                this._opList[i]._unbind(this);
+            }
         },
 
         _test: function _CqBinding__test() {
@@ -288,277 +297,62 @@
                     _debugLog("CqBinding beginTest <" + (this._label ? this._label : "null") + ">", 2);
 
                 this._testing = true;
-                var opResult = this._op._test(this._debug);
-                if (opResult != this._opLastResult || this._alwaysTest) {
+                var test = this._bindingTest(this._debug);
+                if (test !== undefined) {
                     if (this._debug)
-                        _debugLog("CqBinding firing <" + (this._label ? this._label : "null") + "> handler <" + (opResult ? "TRUE" : "FALSE") + ">");
-                    if (opResult && this._trueFunc)
+                        _debugLog("CqBinding firing <" + (this._label ? this._label : "null") + "> handler <" + String(test) + ">");
+                    if (test && this._trueFunc)
                         this._trueFunc();
-                    else if(!opResult && this._falseFunc)
+                    else if(!test && this._falseFunc)
                         this._falseFunc();
                 } else if (this._debug)
-                    _debugLog("CqBinding ignoring <" + (this._label ? this._label : "null") + "> handler <" + (opResult ? "TRUE" : "FALSE") + ">");
+                    _debugLog("CqBinding ignoring <" + (this._label ? this._label : "null") + "> handler <" + String(test) + ">");
 
-                this._opLastResult = opResult;
+                this._lastTest = test;
                 this._testing = false;
 
                 if (this._debug)
                     _debugLog("CqBinding endTest <" + (this._label ? this._label : "null") + ">", -2);
             }
         },
+
         _setLabel: function _CqBinding__setLabel(label) {
             this._label = label;
             return this;
+        },
+
+        last: function _CqBinding_last() {
+            return this._lastTest;
         }
     });
-    
-    // _CqOp
-    
-    function _CqOp(test, opList) {
-        this._test = test;
-        this._opList = opList;
-        this._isCqOp = true;
-    }
 
-    _CqOp.prototype = _Extend(_CqObject.prototype, {
-        // Utility
-        
-        isCqOp: function _CqOp_isCqOp(op) {
-            return ((typeof(op) == "object") && (op != null) && (op._isCqOp == true));
-        },
-
-        // Internal
-
-        _buildOps: function _CqOp__buildOps(allOps, op) {
-            if (this.isCqOp(op))
-                allOps.push(op);
-            else if (isArray(op)) {
-                for (var i=0; i<op.length; i++) {
-                    allOps = this._buildOps(allOps, op[i]);
-                }
-            } else if (typeof(op) == "function")
-                allOps.push(new _CqOp(op, []));
-            else
-                allOps.push(new Cq(op));
-            return allOps;
-        },
-
-        // iterFunc: iterative computation between current op and next
-        // stopFunc: optional condition of last computated result such that we stop chaining and accept result
-        _wrap: function _CqOp__wrap(args, iterFunc, stopFunc) {
-            var argLen = args.length;
-            var allOps = new Array();
-            allOps.push(this);
-            for (var a = 0; a < argLen; a++) {
-                var realOp;
-                var op = args[a];
-                allOps = this._buildOps(allOps, op);
-            }
-
-            var test;
-            //Todo: optimize for len == 2, allOps[0] and allOps[1]
-            if (allOps.length == 1) {
-                test = function _CqOp__wrap_unaryTest(debug) {
-                    var lastOpTest = allOps[0]._test(debug);
-                    if (debug)
-                        _debugLog("CqOp eval <"+String(lastOpTest)+"> args <"+String(lastOpTest)+"> func <"+iterFunc.toString()+">");
-                    return iterFunc(lastOpTest);
-                };
-            } else {
-                test = function _CqOp__wrap_multTest(debug) {
-                    var lastOpTest = allOps[0]._test(debug);                    
-                    var testArgs;
-                    if (debug)
-                        testArgs = String(lastOpTest);
-                    var result = undefined;
-                    var len = allOps.length;
-                    for (var i=1; i<len && !(stopFunc && stopFunc(result)); i++) {
-                        var opTest = allOps[i]._test(debug);
-                        result = iterFunc(lastOpTest, opTest, result);
-                        lastOpTest = opTest;
-                        if (debug)
-                            testArgs += ","+String(lastOpTest);
-                    }
-                    if (debug)
-                        _debugLog("CqOp eval <"+String(result)+"> args <"+String(testArgs)+"> func <"+String(iterFunc)+">");
-                    return result;
-                };
-            }
-
-            var retOp = new _CqOp(test, allOps);
-            if (_debug) {
-                retOp._debugIterFunc = iterFunc ? iterFunc.toString() : "none";
-                retOp._debugStopFunc = stopFunc ? stopFunc.toString() : "none";
-            }
-            return retOp;
-        },
-
-        // Operators
-        // a: last test result in sequence, b: this test result, r: last result of this function
-
-        // Logic
-
-        _andIter: function _CqOp_andIter(a,b){return a && b;},
-        _andStop: function _CqOp_andStop(r){return r === false;},
-        and: function _CqOp_and() {
-            return this._wrap(arguments, this._andIter, this._andStop);
-        },
-
-        _orIter: function _CqOp_orIter(a,b){return a || b;},
-        _orStop: function _CqOp_orStop(r){return r;},
-        or: function _CqOp_or() {
-            return this._wrap(arguments, this._orIter, this._orStop);
-        },
-
-        _notIter: function _CqOp_notIter(a){return !a;},
-        _notStop: function _CqOp_notStop(r){return true;},
-        not: function _CqOp_not() {
-            return this._wrap(arguments, this._notIter, this._notStop);
-        },
-
-        // Comparison
-
-        _eqIter: function _CqOp_eqIter(a,b){return a == b;},
-        _eqStop: function _CqOp_eqStop(r){return r === false;},
-        eq: function _CqOp_eq() {
-            return this._wrap(arguments, this._eqIter, this._eqStop);
-        },
-
-        _neqIter: function _CqOp_neqIter(a,b){return a != b;},
-        _neqStop: function _CqOp_neqStop(r){return r === false;},
-        neq: function _CqOp_neq() { 
-            return this._wrap(arguments, this._neqIter, this._neqStop);
-        },
-
-        _eq_Iter: function _CqOp_eq_Iter(a,b){return a === b;},
-        _eq_Stop: function _CqOp_eq_Stop(r){return r === false;},
-        eq_: function _CqOp_eq_() {
-            return this._wrap(arguments, this._eq_Iter, this._eq_Stop);
-        },
-
-        _neq_Iter: function _CqOp_neq_Iter(a,b){return a !== b;},
-        _neq_Stop: function _CqOp_neq_Stop(r){return r === false;},
-        neq_: function _CqOp_neq_() {
-            return this._wrap(arguments, this._neq_Iter, this._neq_Stop);
-        },
-
-        _ltIter: function _CqOp_ltIter(a,b){return a < b;},
-        _ltStop: function _CqOp_ltStop(r){return r === false;},
-        lt: function _CqOp_lt() {
-            return this._wrap(arguments, this._ltIter, this._ltStop);
-        },
-
-        _lteIter: function _CqOp_lteIter(a,b){return a <= b;},
-        _lteStop: function _CqOp_lteStop(r){return r === false;},
-        lte: function _CqOp_lte() {
-            return this._wrap(arguments, this._lteIter, this._lteStop);
-        },
-
-        _gtIter: function _CqOp_gtIter(a,b){return a > b;},
-        _gtStop: function _CqOp_gtStop(r){return r === false;},
-        gt: function _CqOp_gt() {
-            return this._wrap(arguments, this._gtIter, this._gtStop);
-        },
-
-        _gteIter: function _CqOp_gteIter(a,b){return a >= b;},
-        _gteStop: function _CqOp_gteStop(r){return r === false;},
-        gte: function _CqOp_gte() {
-            return this._wrap(arguments, this._gteIter, this._gteStop);
-        },
-
-        // Numeric
-
-        _addIter: function _CqOp_addIter(a,b,r){return r === undefined ? a + b : r + b;},
-        add: function _CqOp_add() {
-            return this._wrap(arguments, this._addIter);
-        },
-
-        _subIter: function _CqOp_subIter(a,b,r){return r === undefined ? a - b : r - b;},
-        sub: function _CqOp_subtract() {
-            return this._wrap(arguments, this._subIter);
-        },
-
-        _mulIter: function _CqOp_mulIter(a,b,r){return r === undefined ? a * b : r * b;},
-        mul: function _CqOp_mul() {
-            return this._wrap(arguments, this._mulIter);
-        },
-
-        _divIter: function _CqOp_divIter(a,b,r){return r === undefined ? a / b : r / b;},
-        div: function _CqOp_div() {
-            return this._wrap(arguments, this._divIter);
-        },
-
-        _modIter: function _CqOp_modIter(a,b,r){return r === undefined ? a % b : r % b;},
-        mod: function _CqOp_mod() {
-            return this._wrap(arguments, this._modIter);
-        },
-
-        _negIter: function _CqOp_negIter(a){return -a;},
-        _netStop: function _CqOp_negStop(r){return true;},
-        neg: function _CqOp_neg() {
-            return this._wrap(arguments, this._negIter, this._negStop);
-        },        
-        
-        // Value
-        
-        changed: function Cq_changed() {
-            var self = this;
-            return new _CqOp(function(){ return self._wasChanged; }, [self]);
-        },
-
-        // Binding
-        
-        _bindChildren: function _CqOp__bindChildren(binding) {
-            this._opList.forEach(function(item) { 
-                item._bindChildren(binding); 
-            });
-        },
-
-        bind: function _CqOp_bind(alwaysTest, trueFunc, /*opt*/ falseFunc) {
-            var binding = new _CqBinding(this, alwaysTest, trueFunc, falseFunc);
-            this._bindChildren(binding);
-            return binding;
-        },
-
-        _unbindChildren: function _CqOp__unbindChildren(binding) {
-            this._opList.forEach(function(item) { 
-                item._unbindChildren(binding); 
-            });
-        }
-    });
-    
     // Cq
 
-    function Cq(value, /*opt*/ min, /*opt*/ max) {
+    function Cq(value, /*opt*/ min, /*opt*/ max) {       
         this._value = value;
-        this._test = function Cq__test(){ return this._value; };
+
+        this._lastValue = undefined;
         this._boundTo = new _Set();
-        this._isCqOp = true;
         this._wasSet = false;
-        this._wasGet = false;
         this._wasChanged = false;
 
         // optional valid range of values for setting.
-        this._min = undefined;
-        if (min !== undefined)
-            this._min = min;
-        this._max = undefined;
-        if (max !== undefined)
-            this._max = max;
+        this._min = min;
+        this._max = max;
 
+        // Webkit browsers
         Object.defineProperty(this, "v", {
             get : this._getValue,
             set : this._setValue
         });
     }
 
-    Cq.prototype = _Extend(_CqOp.prototype, {
+    Cq.prototype = _Extend(_CqObject.prototype, {
+        // FF, MSIE
+        get v() { return this._getValue(); },
+        set v(value) { this._setValue(value); },
+        
         _getValue: function Cq__getValue() {
-            this._wasGet = true;
-            this._boundTo.map( function(binding) {
-              binding._test();
-            });
-            this._wasGet = false;
             return this._value;
         },
 
@@ -569,6 +363,7 @@
 
             this._wasSet = true;
             if (this._value != val) {
+                this._lastValue = this._value;
                 this._value = val
                 this._wasChanged = true;
             }
@@ -579,48 +374,69 @@
             this._wasSet = false;
         },
 
-        // Operations
+        // Value operations inside of test
 
         set: function Cq_set() {
-            var self = this;
-            return new _CqOp(function(){ return self._wasSet; }, [self]);
+            return this._wasSet;
         },
-
-        get: function Cq_get() {
-            var self = this;
-            return new _CqOp(function(){ return self._wasGet; }, [self]);
-        },      
         
         changed: function Cq_changed() {
-            var self = this;
-            return new _CqOp(function(){ return self._wasChanged; }, [self]);
+            return this._wasChanged;
+        },
+        
+        last: function Cq_last() {
+            return this._lastValue;
         },
 
         // Binding
 
-        _bindChildren: function Cq__bindChildren(binding) {
+        _bind: function Cq__bind(binding) {
             this._boundTo.insert(binding);
         },
     
-        _unbindChildren: function Cq__unbindChildren(binding) {
+        _unbind: function Cq__unbind(binding) {
             this._boundTo.remove(binding);
         }
     });
-
-    // CqFunc
     
-    function CqFunc(test, opList) {
-        return new _CqOp(test, opList);
+    // CqBind
+
+    function CqBind(opList, test, trueFunc, falseFunc) {
+        return new _CqBinding(opList, test, trueFunc, falseFunc);
     }
+    
+    // CqSet
+    
+    function CqSet() {
+        this._set = new Set();
+    }
+    
+    CqSet.prototype = _Extend(_CqObject.prototype, {
+        insert: function CqSet_insert(binding) {
+            this._set.insert(binding);
+        },
+
+        remove: function CqSet_remove(binding) {
+            this._set.remove(binding);
+        },
+
+        unbind: function CqSet_unbind() {
+            this._set.map( function(binding) {
+                binding.unbind();
+            });
+        }
+    });
     
     // Exports
 
     if (typeof module !== 'undefined' && module.exports) {
         module.exports = Cq;
         Cq.Cq = Cq;
+        Cq.CqBind = CqBind;
+        Cq._CqDebugLog = _debugLog;
     } else {
         root.Cq = Cq;
-        root.CqFunc = CqFunc;
+        root.CqBind = CqBind;
         root._CqDebugLog = _debugLog;
     }
     
