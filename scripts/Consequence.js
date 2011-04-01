@@ -176,9 +176,22 @@
     
     var _debug = true; // Uncomment for debug functionality
     var _debugLog = function(){};
+    var _debugIndent = 0;
     if (_debug)
-        _debugLog = function(str) { console.log(str); };
-     
+        _debugLog = function(str, indent) {
+            var indentString = "";
+            if (indent == undefined)
+                indent = 0;
+            if (indent >= 0) {
+                indentString = new Array(Math.max(0, _debugIndent)+1).join(" ") + str;
+                _debugIndent += indent;
+            } else {
+                _debugIndent += indent;
+                indentString = new Array(Math.max(0, _debugIndent)+1).join(" ") + str;
+            }
+            console.log(indentString); 
+        };           
+
     var root = this;
     var previousCq = root.Cq;
 
@@ -261,6 +274,7 @@
         this._opLastResult = false;
         this._testing = false;
         this._debug = false;
+        this._label = null;
     }
 
     _CqBinding.prototype = _Extend(_CqObject.prototype, {
@@ -271,22 +285,30 @@
         _test: function _CqBinding__test() {
             if (!this._testing) {
                 if (this._debug)
-                    _debugLog("CqBinding _test() begin");
+                    _debugLog("CqBinding beginTest <" + (this._label ? this._label : "null") + ">", 2);
 
                 this._testing = true;
                 var opResult = this._op._test(this._debug);
                 if (opResult != this._opLastResult || this._alwaysTest) {
+                    if (this._debug)
+                        _debugLog("CqBinding firing <" + (this._label ? this._label : "null") + "> handler <" + (opResult ? "TRUE" : "FALSE") + ">");
                     if (opResult && this._trueFunc)
                         this._trueFunc();
                     else if(!opResult && this._falseFunc)
                         this._falseFunc();
-                }
+                } else if (this._debug)
+                    _debugLog("CqBinding ignoring <" + (this._label ? this._label : "null") + "> handler <" + (opResult ? "TRUE" : "FALSE") + ">");
+
                 this._opLastResult = opResult;
                 this._testing = false;
 
                 if (this._debug)
-                    _debugLog("CqBinding _test() end");
+                    _debugLog("CqBinding endTest <" + (this._label ? this._label : "null") + ">", -2);
             }
+        },
+        _setLabel: function _CqBinding__setLabel(label) {
+            this._label = label;
+            return this;
         }
     });
     
@@ -296,7 +318,6 @@
         this._test = test;
         this._opList = opList;
         this._isCqOp = true;
-        this._class = null;
     }
 
     _CqOp.prototype = _Extend(_CqObject.prototype, {
@@ -338,38 +359,29 @@
             //Todo: optimize for len == 2, allOps[0] and allOps[1]
             if (allOps.length == 1) {
                 test = function _CqOp__wrap_unaryTest(debug) {
-                    if (debug) {
-                        var testRes = allOps[0]._test(debug);
-                        _debugLog("Result:"+testRes+" Func: "+iterFunc.toString());
-                    } else
-                        return iterFunc(allOps[0]._test());
+                    var lastOpTest = allOps[0]._test(debug);
+                    if (debug)
+                        _debugLog("CqOp eval <"+String(lastOpTest)+"> args <"+String(lastOpTest)+"> func <"+iterFunc.toString()+">");
+                    return iterFunc(lastOpTest);
                 };
             } else {
                 test = function _CqOp__wrap_multTest(debug) {
-                    if (debug) {
-                        var lastOpTest = allOps[0]._test(debug);
-                        var testRes = lastOpTest.toString();
-                        var result = undefined;
-                        var len = allOps.length;
-                        for (var i=1; i<len && !(stopFunc && stopFunc(result)); i++) {
-                            var opTest = allOps[i]._test(debug);
-                            result = iterFunc(lastOpTest, opTest, result);
-                            lastOpTest = opTest;
-                            testRes += ","+lastOpTest.toString();
-                        }
-                        _debugLog("Result:"+testRes+" Func: "+iterFunc.toString());
-                        return result;
-                    } else {
-                        var lastOpTest = allOps[0]._test();
-                        var result = undefined;
-                        var len = allOps.length;
-                        for (var i=1; i<len && !(stopFunc && stopFunc(result)); i++) {
-                            var opTest = allOps[i]._test();
-                            result = iterFunc(lastOpTest, opTest, result);
-                            lastOpTest = opTest;
-                        }
-                        return result;
+                    var lastOpTest = allOps[0]._test(debug);                    
+                    var testArgs;
+                    if (debug)
+                        testArgs = String(lastOpTest);
+                    var result = undefined;
+                    var len = allOps.length;
+                    for (var i=1; i<len && !(stopFunc && stopFunc(result)); i++) {
+                        var opTest = allOps[i]._test(debug);
+                        result = iterFunc(lastOpTest, opTest, result);
+                        lastOpTest = opTest;
+                        if (debug)
+                            testArgs += ","+String(lastOpTest);
                     }
+                    if (debug)
+                        _debugLog("CqOp eval <"+String(result)+"> args <"+String(testArgs)+"> func <"+String(iterFunc)+">");
+                    return result;
                 };
             }
 
@@ -486,6 +498,13 @@
         neg: function _CqOp_neg() {
             return this._wrap(arguments, this._negIter, this._negStop);
         },        
+        
+        // Value
+        
+        changed: function Cq_changed() {
+            var self = this;
+            return new _CqOp(function(){ return self._wasChanged; }, [self]);
+        },
 
         // Binding
         
@@ -588,6 +607,12 @@
         }
     });
 
+    // CqFunc
+    
+    function CqFunc(test, opList) {
+        return new _CqOp(test, opList);
+    }
+    
     // Exports
 
     if (typeof module !== 'undefined' && module.exports) {
@@ -595,6 +620,8 @@
         Cq.Cq = Cq;
     } else {
         root.Cq = Cq;
+        root.CqFunc = CqFunc;
+        root._CqDebugLog = _debugLog;
     }
     
     Cq.VERSION = '0.1.0';

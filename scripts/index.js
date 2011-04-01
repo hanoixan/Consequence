@@ -199,13 +199,9 @@ $(document).ready(function() {
         return window.innerHeight - $box.height() - margin;        
     }
     var boxRight = function(debug) {
-        if(debug)
-            console.log("boxRight: "+(posX.v + $box.width()));
         return posX.v + $box.width();
     };
     var boxBottom = function(debug) {
-        if(debug)
-            console.log("boxBottom: "+(posY.v + $box.height()));
         return posY.v + $box.height();
     };
     var clamp = function(min, max, value) {
@@ -221,30 +217,35 @@ $(document).ready(function() {
     // Have window hold onto these so they don't get GCd
     window.bindings = bindings;
     // Change direction when we hit the sides
-    bindings.push(posX.lt(minXBoundary).bind(true, function() {
+    bindings.push(posX.lt(minXBoundary).bind(false, function() {
         vecX = Math.abs(vecX);
         posX.v = 0;
-    }));
-    bindings.push(posY.lt(minYBoundary).bind(true, function() {
+        _CqDebugLog("minX: posX=0");
+    })._setLabel("minX"));
+    bindings.push(posY.lt(minYBoundary).bind(false, function() {
         vecY = Math.abs(vecY);
         posY.v = 0;
-    }));
-    bindings.push(posX.gt(maxXBoundary).bind(true, function() {
+        _CqDebugLog("minY: posY=0");
+    })._setLabel("minY"));
+    bindings.push(posX.gt(maxXBoundary).bind(false, function() {
         vecX = -Math.abs(vecX);
         posX.v = maxXBoundary();
-    }));
-    bindings.push(posY.gt(maxYBoundary).bind(true, function() {
+        _CqDebugLog("maxX: posX=MAX");
+    })._setLabel("maxX"));
+    bindings.push(posY.gt(maxYBoundary).bind(false, function() {
         vecY = -Math.abs(vecY);
         posY.v = maxYBoundary();
-    }));
+        _CqDebugLog("maxY: posY=MAX");
+    })._setLabel("maxY"));
     // Deflect off mouse
     var deflectBinding = ((mouseX.gt(posX)).and(mouseX.lt(boxRight))).and(
             (mouseY.gt(posY)).and(mouseY.lt(boxBottom))).bind(false, function() {
         // Mouse is in box - deflect!
         vecX = -vecX + mouseVecX;
         vecY = -vecY + mouseVecY;
+        _CqDebugLog("deflect: deflected");
     });
-    bindings.push(deflectBinding);
+    bindings.push(deflectBinding._setLabel("deflect"));
     
     // Update position
     bindings.push(posX.changed().or(posY.changed()).bind(false, function() {
@@ -253,7 +254,9 @@ $(document).ready(function() {
         var y = Math.floor(clamp(minYBoundary(), maxYBoundary(), posY.v));
         $box.css({left: x, top: y});
         $boxPos.html("x:"+x+",y:"+y+",w:"+$box.width()+",h:"+$box.height()+" : "+mouseX.v+","+mouseY.v);
-    }));
+
+        _CqDebugLog("pos changed css: pos = " + x + "," + y);
+    })._setLabel("posXOrPosYChanged"));
 
     // Create a nudge loop
     var frameDelta = 1000/30;
@@ -289,11 +292,15 @@ $(document).ready(function() {
     };     
     
     document.onmousedown = function(event) {
-        deflectBinding._debug = true;
+        bindings.forEach( function(item) {
+            item._debug = true;
+        });
     };
 
     document.onmouseup = function(event) {
-        deflectBinding._debug = false;
+        bindings.forEach( function(item) {
+            item._debug = false;
+        });
     };
    
 });
